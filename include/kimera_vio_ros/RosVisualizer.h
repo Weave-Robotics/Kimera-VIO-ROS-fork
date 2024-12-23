@@ -120,6 +120,11 @@ class RosVisualizer : public Visualizer3D {
 
   // Typedefs
   typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloudXYZRGB;
+
+  // Latch on last odom message so that tf is always brodcasting
+  geometry_msgs::TransformStamped odom_tf;
+
+  Eigen::Matrix4d base_link_T_camera_link;
 };
 
 }  // namespace VIO

@@ -64,6 +64,11 @@ RosVisualizer::RosVisualizer(const VioParams& vio_params)
   pointcloud_pub_ =
       nh_.advertise<PointCloudXYZRGB>("time_horizon_pointcloud", 1, true);
   mesh_3d_frame_pub_ = nh_.advertise<pcl_msgs::PolygonMesh>("mesh", 1, true);
+
+  odom_tf.header.frame_id = odom_frame_id_;
+  odom_tf.child_frame_id = base_link_frame_id_;
+
+  base_link_T_camera_link << -0.00275032, -0.99998979, -0.00358607, -0.00125374, -0.00248532,  0.00359291, -0.99999046, -0.01345573, 0.99999313, -0.00274138, -0.00249518, -0.01540152, 0, 0, 0, 1;
 }
 
 VisualizerOutput::UniquePtr RosVisualizer::spinOnce(
@@ -302,7 +307,8 @@ void RosVisualizer::publishState(const BackendOutput::ConstPtr& output) const {
   CHECK(output);
   // Get latest estimates for odometry.
   const Timestamp& ts = output->timestamp_;
-  const gtsam::Pose3& pose = output->W_State_Blkf_.pose_;
+  const gtsam::Pose3& pose_base_link = output->W_State_Blkf_.pose_;
+  gtsam::Pose3 pose(pose_base_link.matrix() *base_link_T_camera_link);
   const gtsam::Rot3& rotation = pose.rotation();
   const gtsam::Quaternion& quaternion = rotation.toQuaternion();
   const gtsam::Vector3& velocity = output->W_State_Blkf_.velocity_;
@@ -523,6 +529,15 @@ void RosVisualizer::publishTf(const BackendOutput::ConstPtr& output) {
 
   utils::gtsamPoseToRosTf(pose, &odom_tf.transform);
   tf_broadcaster_.sendTransform(odom_tf);
+
+  gtsam::Pose3 pose_camera_link(pose.matrix() *base_link_T_camera_link);
+  geometry_msgs::TransformStamped odom_tf_camera;
+  odom_tf_camera.header.stamp.fromNSec(timestamp);
+  odom_tf_camera.header.frame_id = odom_frame_id_;
+  odom_tf_camera.child_frame_id = "camera_link";
+
+  utils::gtsamPoseToRosTf(pose_camera_link, &odom_tf_camera.transform);
+  tf_broadcaster_.sendTransform(odom_tf_camera);
 }
 
 }  // namespace VIO

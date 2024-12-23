@@ -171,6 +171,20 @@ RosOnlineDataProvider::RosOnlineDataProvider(const VioParams& vio_params)
   publishStaticTf(vio_params_.camera_params_.at(0).body_Pose_cam_,
                   base_link_frame_id_,
                   left_cam_frame_id_);
+  // manually add baselink to base_link_optical frame
+  Eigen::Vector3d translation(0.0, 0.0, 0.0);
+  // Define quaternion (w, x, y, z)
+  Eigen::Quaterniond quaternion(0.5, 0.5, -0.5, 0.5);
+  quaternion.normalize(); // Ensure it is normalized
+  // Convert Eigen::Quaterniond to gtsam::Rot3
+  gtsam::Rot3 rotation = gtsam::Rot3::Quaternion(quaternion.w(), quaternion.x(), quaternion.y(), quaternion.z());
+  // Convert translation to gtsam::Point3
+  gtsam::Point3 point(translation.x(), translation.y(), translation.z());
+  // Create the gtsam::Pose3
+  gtsam::Pose3 pose(rotation, point);
+  // publishStaticTf(pose,
+  //                 left_cam_frame_id_,
+  //                 "camera_link");
   if (vio_params_.camera_params_.size() == 2) {
     publishStaticTf(vio_params_.camera_params_.at(1).body_Pose_cam_,
                     base_link_frame_id_,
